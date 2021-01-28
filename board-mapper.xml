@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+ "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+ 
+ <mapper namespace="Board">
+ 	<insert id="boardInsert">
+ 		INSERT INTO BOARD(BNUMBER, MID, BDATE, BTITLE, BCONTENT, BIMG, BCNUMBER)
+ 		VALUES(BNUMBER_SEQ.NEXTVAL, #{MID}, SYSDATE, #{BTITLE}, #{BCONTENT}, #{BIMG}, #{BCNUMBER})
+ 	</insert>
+ 	
+ 	<select id="boardList" parameterType="BoardCategory" resultType="BoardList">
+ 		SELECT BOARD.BNUMBER,
+    			BOARD.BTITLE,
+    			BOARD.BDATE,
+    			BOARD.BIMG,
+    			BOARDCATEGORY.BCNAME,
+    			MEMBER.MNICK,
+    			BV.BOARDVIEWS,
+    			BL.BOARDLIKE,
+    			BC.BOARDCOMPLAINT
+		FROM BOARD INNER JOIN MEMBER ON BOARD.MID = MEMBER.MID
+            		INNER JOIN BOARDCATEGORY ON BOARD.BCNUMBER = BOARDCATEGORY.BCNUMBER
+           			LEFT OUTER JOIN (SELECT BNUMBER,
+                                			COUNT(MID) AS "BOARDVIEWS"
+                        			FROM BOARDVIEWS
+                        			GROUP BY BNUMBER) BV ON BOARD.BNUMBER = BV.BNUMBER
+            		LEFT OUTER JOIN (SELECT BNUMBER,
+                                    		COUNT(MID) AS "BOARDLIKE"
+                            		FROM BOARDLIKE
+                            		GROUP BY BNUMBER) BL ON BOARD.BNUMBER = BL.BNUMBER
+            		LEFT OUTER JOIN (SELECT BNUMBER,
+                                    		COUNT(MID) AS "BOARDCOMPLAINT"
+                            		FROM BOARDCOMPLAINT
+                            		GROUP BY BNUMBER) BC ON BOARD.BNUMBER = BC.BNUMBER
+ 		<include refid="boardCategory"></include>
+ 		ORDER BY BNUMBER DESC
+ 	</select>
+ 	
+ 	<sql id="boardCategory">
+ 		<choose>
+ 			<when test="BCNUMBER != 0">
+ 				WHERE BOARD.BCNUMBER = #{BCNUMBER}
+ 			</when>
+ 		</choose>
+ 	</sql>
+ 	<!--게시판 내용 및 조회수 좋아요 등등 게시판에 대한 내용을 가져옴 -->
+ 	 <select id="boardDetail" parameterType="BoardView" resultType="BoardView" >
+ 	SELECT BOARD.BNUMBER,
+    BOARD.BTITLE,
+    BOARD.BCONTENT,
+    BOARD.MID,
+    BOARD.BDATE,
+    BL.BOARDLIKE,
+    BH.BOARDHIT,
+    BOARD.BIMG,
+    BOARDCATEGORY.BCNAME
+    FROM BOARD INNER JOIN BOARDCATEGORY ON BOARD.BCNUMBER= BOARDCATEGORY.BCNUMBER
+LEFT OUTER JOIN (SELECT BNUMBER,
+                                COUNT(MID) AS "BOARDLIKE"
+                            FROM BOARDLIKE
+                            GROUP BY BNUMBER) BL ON BOARD.BNUMBER = BL.BNUMBER
+                                    LEFT OUTER JOIN (SELECT BNUMBER,
+                                                     COUNT(MID) AS "BOARDHIT"
+                                                     FROM BOARDVIEWS
+                                                     GROUP BY BNUMBER) BH ON BOARD.BNUMBER = BH.BNUMBER
+                                                       WHERE BOARD.BNUMBER=#{BNUMBER}
+ 	</select>
+ 	<!--게시판 달린 댓글들의 정보를 가져옴-->
+ 	<select id="boardDetailComments" parameterType="BoardView" resultType="CommentsList">
+ 	SELECT COMMENTS.BNUMBER,
+        COMMENTS.MID,
+        COMMENTS.CMDATE,
+        COMMENTS.CMCONTENT,
+        CL.COMMENTSLIKE
+FROM COMMENTS LEFT OUTER JOIN(SELECT COUNT(MID) AS "COMMENTSLIKE",
+                                    CMBNUMBER
+                                FROM COMMENTSLIKE
+                                GROUP BY CMBNUMBER, CMDATE, CMMID,CLDATE) CL ON COMMENTS.BNUMBER=CL.CMBNUMBER
+                                WHERE COMMENTS.BNUMBER=#{BNUMBER}
+ 	</select>
+ 	
+ 	<select id="boardCategory" parameterType="BoardCategory" resultType="BoardCategory">
+ 		SELECT *
+ 		FROM BOARDCATEGORY
+ 		WHERE BCNUMBER = #{BCNUMBER}
+ 	</select>
+ 	
+ </mapper>
